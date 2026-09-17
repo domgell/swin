@@ -1,11 +1,15 @@
-#pragma once
+#ifndef SWIN_H
+#define SWIN_H
 
+#ifndef SWIN_NO_TYPEDEF
+#include <stdbool.h>
 #include <stdint.h>
-#define u64 uint64_t
-#define u32 uint32_t
-#define u8 uint8_t
-#define i32 int32_t
-#define f32 float
+typedef uint64_t u64;
+typedef uint32_t u32;
+typedef uint8_t u8;
+typedef int32_t i32;
+typedef float f32;
+#endif
 
 // Infer platform used for windowing
 // Possible values:
@@ -18,6 +22,23 @@
 #define SWIN_WAYLAND
 #else
 #error "Unsupported platform"
+#endif
+
+// All public functions are prefixed with SWIN_FN
+#ifndef SWIN_FN
+#ifdef SWIN_WIN32
+#ifdef __cplusplus
+#define SWIN_FN extern "C" __declspec(dllexport)
+#else
+#define SWIN_FN __declspec(dllexport)
+#endif
+#elif defined(SWIN_WAYLAND) || defined(SWIN_MACOS)
+#ifdef __cplusplus
+#define SWIN_FN extern "C" __attribute__((visibility("default")))
+#else
+#define SWIN_FN __attribute__((visibility("default")))
+#endif
+#endif
 #endif
 
 // TODO: window size should always be drawable surface excluding topbar
@@ -34,10 +55,10 @@ typedef struct {
     u32 mouseFlags;
 } SwinInitInfo;
 
-Swin swinInit(SwinInitInfo info);
-void swinQuit(Swin swin);
+SWIN_FN Swin swinInit(SwinInitInfo info);
+SWIN_FN void swinQuit(Swin swin);
 
-bool swinPoll(Swin swin);
+SWIN_FN bool swinPoll(Swin swin);
 
 // typedef enum {
 // SwinPixel_RGBA8unorm,
@@ -47,7 +68,7 @@ bool swinPoll(Swin swin);
 // SwinPixel_BGR8unorm,
 // } SwinPixelFormat;
 
-void swinDraw(Swin swin, const u32* pixels);
+SWIN_FN void swinDraw(Swin swin, const u32* pixels);
 
 // TODO: either, control vsync?
 // bool swinFlip(Swin swin);
@@ -99,14 +120,17 @@ typedef struct {
     bool mouse[5];
 } SwinInput;
 
-SwinInput swinInput(Swin swin);
+SWIN_FN SwinInput swinInput(Swin swin);
 
-bool swinIsKeyDown(Swin swin, u32 key);
-bool swinIsMouseDown(Swin swin, u8 button);
+SWIN_FN bool swinIsKeyDown(Swin swin, u32 key);
+SWIN_FN bool swinIsMouseDown(Swin swin, u8 button);
+// Map the keys forward, left, backward and right to a direction.
+// The resulting direction is *not* normalized.
+SWIN_FN SwinPoint swinMapKeys(Swin swin, u8 forward, u8 left, u8 backward, u8 right);
 
 typedef enum {
     SwinMouse_Default = 0,
-    // Hide mouse cursor within window bounds
+    // Hidden when within window bounds
     SwinMouse_Hidden = 1 << 1,
     // Cannot exit window bounds
     SwinMouse_Capture = 1 << 2,
@@ -116,11 +140,11 @@ typedef enum {
 
 typedef u32 SwinMouseFlagBits;
 
-void swinSetMouseFlags(Swin swin, SwinMouseFlagBits flags);
+SWIN_FN void swinSetMouseFlags(Swin swin, SwinMouseFlagBits flags);
 
-void swinSetMousePosition(Swin swin, SwinPoint position);
-SwinPoint swinGetMousePosition(Swin swin);
-SwinPoint swinGetMouseDelta(Swin swin);
+SWIN_FN void swinSetMousePosition(Swin swin, SwinPoint position);
+SWIN_FN SwinPoint swinGetMousePosition(Swin swin);
+SWIN_FN SwinPoint swinGetMouseDelta(Swin swin);
 
 /* --------------------------------- :Window -------------------------------- */
 
@@ -134,21 +158,21 @@ typedef enum {
 
 typedef u32 SwinWindowFlagBits;
 
-void swinSetWindowFlags(Swin swin, SwinWindowFlagBits flags);
-SwinSize swinGetWindowSize(Swin swin);
-void swinSetWindowSize(Swin swin, SwinSize size);
-bool swinIsWindowResized(Swin swin);
-SwinPoint swinGetWindowPosition(Swin swin);
-void swinSetWindowPosition(Swin swin, SwinPoint position);
-void swinSetWindowTitle(Swin swin, const char* title);
+SWIN_FN void swinSetWindowFlags(Swin swin, SwinWindowFlagBits flags);
+SWIN_FN SwinSize swinGetWindowSize(Swin swin);
+SWIN_FN void swinSetWindowSize(Swin swin, SwinSize size);
+SWIN_FN bool swinIsWindowResized(Swin swin);
+SWIN_FN SwinPoint swinGetWindowPosition(Swin swin);
+SWIN_FN void swinSetWindowPosition(Swin swin, SwinPoint position);
+SWIN_FN void swinSetWindowTitle(Swin swin, const char* title);
 
-SwinPoint swinWindowToScreen(Swin swin, SwinPoint point);
-SwinPoint swinScreenToWindow(Swin swin, SwinPoint point);
+SWIN_FN SwinPoint swinWindowToScreen(Swin swin, SwinPoint point);
+SWIN_FN SwinPoint swinScreenToWindow(Swin swin, SwinPoint point);
 
 /* ---------------------------------- :Time --------------------------------- */
 
-f32 swinTime(Swin swin);
-f32 swinDeltaTime(Swin swin);
+SWIN_FN f32 swinTime(Swin swin);
+SWIN_FN f32 swinDeltaTime(Swin swin);
 // u64 swinTimeNS(Swin swin);
 
 // typedef enum {
@@ -164,17 +188,30 @@ f32 swinDeltaTime(Swin swin);
 // u32 swinGetScreenCount(Swin swin);
 // void swinSetScreen(u32 screenIndex);
 
+/* --------------------------------- :Win32 --------------------------------- */
 
+#ifdef SWIN_WIN32
+
+typedef struct {
+    void* instance; // `HINSTANCE`
+    void* wnd; // `HWND`
+} SwinWin32State;
+
+SWIN_FN SwinWin32State swinGetWin32State(Swin swin);
+
+// TODO: allow override winproc
+// swinSetWin32Proc(Swin swin, SwinWin32Proc proc);
+
+#endif
 
 /* ---------------------------------- :Impl --------------------------------- */
 
-// TEMP
-#define SWIN_IMPL
 #ifdef SWIN_IMPL
 
 // TODO: ifdef
 #include <stdlib.h>
 #define SWIN_MALLOC malloc
+#define SWIN_FREE free
 
 // TODO: ifdef
 #include <assert.h>
@@ -190,31 +227,29 @@ bool swinIsMouseDown(Swin swin, u8 button) {
     return input.mouse[button];
 }
 
+SwinPoint swinMapKeys(Swin swin, u8 forward, u8 left, u8 backward, u8 right) {
+    SwinPoint dir = {0, 0};
+    SwinInput input = swinInput(swin);
+    if (input.keys[forward]) dir.y += 1;
+    if (input.keys[backward]) dir.y -= 1;
+    if (input.keys[left]) dir.x -= 1;
+    if (input.keys[right]) dir.x += 1;
+    return dir;
+}
+
 #endif
-
-/* --------------------------------- :Win32 --------------------------------- */
-
-#ifdef SWIN_WIN32
-
-typedef struct {
-    // `HINSTANCE`
-    void* instance;
-    // `HWND`
-    void* hwnd;
-} SwinWin32State;
-
-SwinWin32State swinGetWin32State(Swin swin);
 
 /* ------------------------------- :Impl.Win32 ------------------------------ */
 
-#ifdef SWIN_IMPL
+#if defined(SWIN_IMPL) && defined(SWIN_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 struct Swin_t {
     // Win32
     HINSTANCE instance;
-    HWND hwnd;
+    HWND wnd;
+    HDC dc;
     // Window
     u32 width;
     u32 height;
@@ -234,18 +269,24 @@ struct Swin_t {
 };
 
 SwinWin32State swinGetWin32State(Swin swin) {
-    return (SwinWin32State) {
+    return (SwinWin32State){
         .instance = swin->instance,
-        .hwnd = swin->hwnd
+        .wnd = swin->wnd
     };
 }
 
+#ifndef SWIN_WIN32_PROC
+#define SWIN_WIN32_PROC(hwnd, msg, wparam, lparam) false
+#endif
+
 LRESULT CALLBACK swinWin32Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+    if (SWIN_WIN32_PROC(hwnd, msg, wparam, lparam)) return true;
+
     Swin swin = (Swin)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
 
     // Window closed
     if (msg == WM_DESTROY) PostQuitMessage(0);
-    // Window resize
+        // Window resize
     else if (msg == WM_SIZE) {
         u32 w = LOWORD(lparam);
         u32 h = HIWORD(lparam);
@@ -275,12 +316,12 @@ LRESULT CALLBACK swinWin32Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
         RAWINPUT raw;
 
         UINT inputSize = GetRawInputData(
-                (HRAWINPUT)lparam,
-                RID_INPUT,
-                &raw,
-                &size,
-                sizeof(RAWINPUTHEADER)
-            );
+            (HRAWINPUT)lparam,
+            RID_INPUT,
+            &raw,
+            &size,
+            sizeof(RAWINPUTHEADER)
+        );
 
         if (inputSize == size) {
             if (raw.header.dwType == RIM_TYPEMOUSE) {
@@ -300,7 +341,9 @@ LRESULT CALLBACK swinWin32Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 Swin swinInit(SwinInitInfo info) {
     Swin swin = (Swin)malloc(sizeof(struct Swin_t));
     SWIN_ASSERT(swin);
-    *swin = (struct Swin_t) {};
+    *swin = (struct Swin_t){};
+
+    SWIN_ASSERT(info.width > 0 && info.height > 0 && "Must provide info.width and info.height");
     swin->width = info.width;
     swin->height = info.height;
 
@@ -315,21 +358,21 @@ Swin swinInit(SwinInitInfo info) {
     RegisterClassA(&wc);
 
     // Window
-    swin->hwnd = CreateWindowA(
-            "Swin", info.title,
-            WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-            info.width, info.height, 0, 0,
-            swin->instance, 0
-        );
+    swin->wnd = CreateWindowA(
+        "Swin", info.title,
+        WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
+        info.width, info.height, 0, 0,
+        swin->instance, 0
+    );
 
-    SetWindowLongPtrA(swin->hwnd, GWLP_USERDATA, (LONG_PTR)swin);
+    SetWindowLongPtrA(swin->wnd, GWLP_USERDATA, (LONG_PTR)swin);
 
     // Raw mouse input
     RAWINPUTDEVICE rid = {
         .usUsagePage = 0x01, // Generic Desktop Controls
-        .usUsage = 0x02,     // Mouse
+        .usUsage = 0x02, // Mouse
         .dwFlags = 0,
-        .hwndTarget = swin->hwnd
+        .hwndTarget = swin->wnd
     };
     RegisterRawInputDevices(&rid, 1, sizeof(rid));
 
@@ -338,7 +381,7 @@ Swin swinInit(SwinInitInfo info) {
     swinSetMouseFlags(swin, info.mouseFlags);
 
     // Launch window
-    ShowWindow(swin->hwnd, SW_SHOW);
+    ShowWindow(swin->wnd, SW_SHOW);
     swin->initialized = true;
 
     // Time
@@ -397,24 +440,26 @@ void swinDraw(Swin swin, const u32* pixels) {
         }
     };
 
-    HDC dc = GetDC(swin->hwnd);
-    StretchDIBits(
-        dc,
-        0, 0, swin->width, swin->height,
-        0, 0, swin->width, swin->height,
+    if (!swin->dc) swin->dc = GetDC(swin->wnd);
+
+    SetDIBitsToDevice(
+        swin->dc,
+        0, 0,
+        swin->width, swin->height,
+        0, 0,
+        0, swin->height,
         pixels,
         (BITMAPINFO*)&bmi,
-        DIB_RGB_COLORS,
-        SRCCOPY
+        DIB_RGB_COLORS
     );
-    ReleaseDC(swin->hwnd, dc);
 }
 
 void swinQuit(Swin swin) {
     if (!swin) return;
 
-    DestroyWindow(swin->hwnd);
-    free(swin);
+    if (swin->dc) ReleaseDC(swin->wnd, swin->dc);
+    DestroyWindow(swin->wnd);
+    SWIN_FREE(swin);
 }
 
 /* ---------------------------- :Impl.Win32.Input --------------------------- */
@@ -425,8 +470,8 @@ SwinInput swinInput(Swin swin) {
 
 void swinWin32ClipCursor(Swin swin) {
     RECT rect;
-    GetClientRect(swin->hwnd, &rect);
-    MapWindowPoints(swin->hwnd, NULL, (POINT*)&rect, 2);
+    GetClientRect(swin->wnd, &rect);
+    MapWindowPoints(swin->wnd, NULL, (POINT*)&rect, 2);
     ClipCursor(&rect);
 }
 
@@ -459,19 +504,19 @@ void swinSetMouseFlags(Swin swin, SwinMouseFlagBits flags) {
 
 // TODO: not sync with input.mouseX, input.mouseY?
 void swinSetMousePosition(Swin swin, SwinPoint position) {
-    POINT p = { position.x, position.y };
-    ClientToScreen(swin->hwnd, &p);
+    POINT p = {position.x, position.y};
+    ClientToScreen(swin->wnd, &p);
     SetCursorPos(p.x, p.y);
 }
 
 SwinPoint swinGetMousePosition(Swin swin) {
-    return (SwinPoint) {
+    return (SwinPoint){
         swin->input.mouseX, swin->input.mouseY
     };
 }
 
 SwinPoint swinGetMouseDelta(Swin swin) {
-    return (SwinPoint) {
+    return (SwinPoint){
         swin->input.mouseDeltaX, swin->input.mouseDeltaY
     };
 }
@@ -479,22 +524,22 @@ SwinPoint swinGetMouseDelta(Swin swin) {
 /* --------------------------- :Impl.Win32.Window --------------------------- */
 
 SwinSize swinGetWindowSize(Swin swin) {
-    return (SwinSize) {
+    return (SwinSize){
         swin->width, swin->height
     };
 }
 
 void swinSetWindowSize(Swin swin, SwinSize size) {
-    RECT rect = { .right = (LONG)size.x, .bottom = (LONG)size.y, };
+    RECT rect = {.right = (LONG)size.x, .bottom = (LONG)size.y,};
 
     // Resize
-    DWORD style = (DWORD)GetWindowLongA(swin->hwnd, GWL_STYLE);
+    DWORD style = (DWORD)GetWindowLongA(swin->wnd, GWL_STYLE);
     AdjustWindowRect(&rect, style, false);
 
     // Adjust position
     int cx = rect.right - rect.left;
     int cy = rect.bottom - rect.top;
-    SetWindowPos(swin->hwnd, NULL,
+    SetWindowPos(swin->wnd, NULL,
         0, 0, cx, cy,
         SWP_NOMOVE | SWP_NOZORDER);
 }
@@ -507,35 +552,35 @@ bool swinIsWindowResized(Swin swin) {
 }
 
 void swinSetWindowTitle(Swin swin, const char* title) {
-    SetWindowTextA(swin->hwnd, title);
+    SetWindowTextA(swin->wnd, title);
 }
 
 SwinPoint swinWindowToScreen(Swin swin, SwinPoint point) {
-    POINT p = { point.x, point.y };
-    ClientToScreen(swin->hwnd, &p);
-    return (SwinPoint) {
+    POINT p = {point.x, point.y};
+    ClientToScreen(swin->wnd, &p);
+    return (SwinPoint){
         p.x, p.y
     };
 }
 
 SwinPoint swinScreenToWindow(Swin swin, SwinPoint point) {
-    POINT p = { point.x, point.y };
-    ScreenToClient(swin->hwnd, &p);
-    return (SwinPoint) {
+    POINT p = {point.x, point.y};
+    ScreenToClient(swin->wnd, &p);
+    return (SwinPoint){
         p.x, p.y
     };
 }
 
 SwinPoint swinGetWindowPosition(Swin swin) {
     RECT rect;
-    GetWindowRect(swin->hwnd, &rect);
-    return (SwinPoint) {
+    GetWindowRect(swin->wnd, &rect);
+    return (SwinPoint){
         rect.left, rect.top
     };
 }
 
 void swinSetWindowPosition(Swin swin, SwinPoint position) {
-    SetWindowPos(swin->hwnd, NULL,
+    SetWindowPos(swin->wnd, NULL,
         position.x, position.y, 0, 0,
         SWP_NOSIZE | SWP_NOZORDER);
 }
@@ -553,13 +598,13 @@ void swinSetWindowFlags(Swin swin, SwinWindowFlagBits flags) {
     if (fullscreen)
         style = WS_POPUP;
 
-    SetWindowLongA(swin->hwnd, GWL_STYLE, style);
+    SetWindowLongA(swin->wnd, GWL_STYLE, style);
 
     if (fullscreen) {
         HMONITOR monitor = MonitorFromWindow(
-                swin->hwnd,
-                MONITOR_DEFAULTTONEAREST
-            );
+            swin->wnd,
+            MONITOR_DEFAULTTONEAREST
+        );
 
         MONITORINFO info = {
             .cbSize = sizeof(info)
@@ -568,7 +613,7 @@ void swinSetWindowFlags(Swin swin, SwinWindowFlagBits flags) {
         GetMonitorInfoA(monitor, &info);
 
         SetWindowPos(
-            swin->hwnd,
+            swin->wnd,
             topmost ? HWND_TOPMOST : HWND_NOTOPMOST,
             info.rcMonitor.left,
             info.rcMonitor.top,
@@ -591,7 +636,7 @@ void swinSetWindowFlags(Swin swin, SwinWindowFlagBits flags) {
         );
 
         SetWindowPos(
-            swin->hwnd,
+            swin->wnd,
             topmost ? HWND_TOPMOST : HWND_NOTOPMOST,
             0, 0,
             rect.right - rect.left,
@@ -616,4 +661,5 @@ f32 swinDeltaTime(Swin swin) {
 }
 
 #endif
+
 #endif

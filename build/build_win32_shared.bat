@@ -1,0 +1,1 @@
+clang -std=c99 -x c -shared ../swin.h -o swin_win32.dll -luser32 -lgdi32 -DSWIN_IMPL -DSWIN_WIN32
