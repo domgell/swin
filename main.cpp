@@ -6,7 +6,7 @@
 int main() {
     u32 width = 400, height = 300;
     Swin swin = swinInit({.width = width, .height = height});
-    swinSetWindowFlags(swin, SwinWindow_Topmost);
+    swinSetWindowFlags(swin, SwinWindow_Resizable);
 
     u32* pixels = (u32*)malloc(width * height * sizeof(u32));
 
@@ -21,6 +21,18 @@ int main() {
             free(pixels);
             pixels = (u32*)malloc(width * height * sizeof(u32));
         }
+
+        if (swinIsMouseDown(swin, Swin_MouseLeft)) {
+            swinSetMouseFlags(swin, SwinMouse_Locked);
+            // printf("mouse down\n");
+        } else {
+            swinSetMouseFlags(swin, SwinMouse_Default);
+        }
+
+        f32 dt = swinDeltaTime(swin);
+        static char fps[64];
+        snprintf(fps, sizeof(fps), "FPS: %.2f", 1.0f / dt);
+        swinSetWindowTitle(swin, fps);
 
         for (u32 y = 0; y < height; y++) {
             for (u32 x = 0; x < width; x++) {

@@ -410,7 +410,12 @@ void swinSetWindowFlags(Swin swin, SwinWindowFlagBits flags) {
         );
     }
 
+    swin->windowFlags = flags;
     swin->initialized = true;
+}
+
+SwinWindowFlagBits swinGetWindowFlags(Swin swin) {
+    return swin->windowFlags;
 }
 
 /* ---------------------------- :Impl.Win32.Time ---------------------------- */

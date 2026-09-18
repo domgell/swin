@@ -15,26 +15,26 @@ typedef double f64;
 
 // Infer platform used for windowing
 // Possible values:
-// SWIN_WIN32, SWIN_MACOS, SWIN_WAYLAND, SWIN_X11
+// SWIN_PLATFORM_WIN32, SWIN_PLATFORM_MACOS, SWIN_PLATFORM_WAYLAND, SWIN_PLATFORM_X11
 #if defined(_WIN32)
-#define SWIN_WIN32
+#define SWIN_PLATFORM_WIN32
 #elif defined(__APPLE__) && defined(__MACH__)
-#define SWIN_MACOS
-#elif defined(__linux__) && !defined(SWIN_WAYLAND)
-#define SWIN_X11
+#define SWIN_PLATFORM_MACOS
+#elif defined(__linux__) && !defined(SWIN_PLATFORM_WAYLAND)
+#define SWIN_PLATFORM_X11
 #else
 #error "Unsupported platform"
 #endif
 
 // All public functions are prefixed with SWIN_FN
 #ifndef SWIN_FN
-#ifdef SWIN_WIN32
+#ifdef SWIN_PLATFORM_WIN32
 #ifdef __cplusplus
 #define SWIN_FN extern "C" __declspec(dllexport)
 #else
 #define SWIN_FN __declspec(dllexport)
 #endif
-#elif defined(SWIN_WAYLAND) || defined(SWIN_X11) || defined(SWIN_MACOS)
+#elif defined(SWIN_PLATFORM_WAYLAND) || defined(SWIN_PLATFORM_X11) || defined(SWIN_PLATFORM_MACOS)
 #ifdef __cplusplus
 #define SWIN_FN extern "C" __attribute__((visibility("default")))
 #else
@@ -131,6 +131,12 @@ SWIN_FN bool swinIsMouseDown(Swin swin, u8 button);
 // The resulting direction is *not* normalized.
 SWIN_FN SwinPoint swinMapKeys(Swin swin, u8 forward, u8 left, u8 backward, u8 right);
 
+// TODO:
+// void swinIsKeyJustPressed(Swin swin, u32 key);
+// void swinIsKeyJustReleased(Swin swin, u32 key);
+// void swinIsMouseJustPressed(Swin swin, u32 key);
+// void swinIsMouseJustReleased(Swin swin, u32 key);
+
 typedef enum {
     SwinMouse_Default = 0,
     // Hidden when within window bounds
@@ -144,6 +150,7 @@ typedef enum {
 typedef u32 SwinMouseFlagBits;
 
 SWIN_FN void swinSetMouseFlags(Swin swin, SwinMouseFlagBits flags);
+SWIN_FN SwinMouseFlagBits swinGetMouseFlags(Swin swin);
 
 SWIN_FN void swinSetMousePosition(Swin swin, SwinPoint position);
 SWIN_FN SwinPoint swinGetMousePosition(Swin swin);
@@ -159,11 +166,14 @@ typedef enum {
     // *Not supported on Wayland*
     SwinWindow_Topmost = 1 << 2,
     SwinWindow_NoTopbar = 1 << 5,
+    // TODO: allow for transparent when using swinDraw or direct gpu draw?
+    // SwinWindow_AllowTransparent = 1 << 6
 } SwinWindowFlag;
 
 typedef u32 SwinWindowFlagBits;
 
 SWIN_FN void swinSetWindowFlags(Swin swin, SwinWindowFlagBits flags);
+SWIN_FN SwinWindowFlagBits swinGetWindowFlags(Swin swin);
 SWIN_FN SwinSize swinGetWindowSize(Swin swin);
 SWIN_FN void swinSetWindowSize(Swin swin, SwinSize size);
 SWIN_FN bool swinIsWindowResized(Swin swin);
@@ -174,12 +184,6 @@ SWIN_FN void swinSetWindowTitle(Swin swin, const char* title);
 SWIN_FN SwinPoint swinWindowToScreen(Swin swin, SwinPoint point);
 SWIN_FN SwinPoint swinScreenToWindow(Swin swin, SwinPoint point);
 
-/* ---------------------------------- :Time --------------------------------- */
-
-SWIN_FN f32 swinTime(Swin swin);
-SWIN_FN f32 swinDeltaTime(Swin swin);
-// u64 swinTimeNS(Swin swin);
-
 // typedef enum {
 // SwinWindowEvent_Minimize,
 // SwinWindowEvent_Maximize,
@@ -187,6 +191,14 @@ SWIN_FN f32 swinDeltaTime(Swin swin);
 // } SwinWindowEvent;
 
 // void swinDoWindowEvent(Swin swin, SwinWindowEvent event);
+
+/* ---------------------------------- :Time --------------------------------- */
+
+SWIN_FN f32 swinTime(Swin swin);
+SWIN_FN f32 swinDeltaTime(Swin swin);
+// u64 swinTimeNS(Swin swin);
+
+// -------------------------------------- :Screen --------------------------------------
 
 // SwinSize swinGetScreenSize(Swin swin, u32 screenIndex);
 // u32 swinGetCurrentScreen(Swin swin);
@@ -197,12 +209,14 @@ SWIN_FN f32 swinDeltaTime(Swin swin);
 
 #include "platform/swin_common.h"
 
-#if defined(SWIN_WIN32)
+#if defined(SWIN_PLATFORM_WIN32)
 #include "platform/swin_win32.h"
-#elif defined(SWIN_X11)
+#elif defined(SWIN_PLATFORM_X11)
 #include "platform/swin_x11.h"
-#elif defined(SWIN_WAYLAND)
+#elif defined(SWIN_PLATFORM_WAYLAND)
 #include "platform/swin_wayland.h"
 #endif
+
+// TODO: macos
 
 #endif
