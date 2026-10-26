@@ -1,35 +1,34 @@
 #pragma once
 
-typedef struct {
-    void* display; // Display*
-    void* window; // Window
-} SwinX11State;
 
+// *DEPRECATED* Use `swinGetPlatformState()`
 SWIN_FN SwinX11State swinGetX11State(Swin swin);
 
 #ifdef SWIN_IMPL
 
-#include <X11/Xlib.h>
-#include <X11/Xatom.h>
-#include <X11/Xutil.h>
-
-#include <string.h>
 #include <time.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/extensions/XInput2.h>
+#include <string.h>
 
 struct Swin_t {
     // X11
     Display* display;
     Window window;
     GC gc;
-    XImage* image;
+    XImage* gcImage;
     i32 screen;
     // Window
     u32 width;
     u32 height;
     bool resized;
     SwinWindowFlagBits windowFlags;
+    // XInput2
+    i32 xiOpcode;
     // Input
     SwinInput input;
+    SwinInput prevInput;
     SwinMouseFlagBits mouseFlags;
     SwinPoint lockedCursorPosition;
     // Time
@@ -39,27 +38,34 @@ struct Swin_t {
     f32 totalTime;
 };
 
+SwinX11State swinGetX11State(Swin swin) {
+    SwinX11State state = {};
+    state.display = swin->display;
+    state.window = swin->window;
+    return state;
+}
+
 void swinX11InitImage(Swin swin) {
-    if (swin->image)
-        XDestroyImage(swin->image);
+    if (swin->gcImage)
+        XDestroyImage(swin->gcImage);
 
     Visual* visual = DefaultVisual(swin->display, swin->screen);
     i32 depth = DefaultDepth(swin->display, swin->screen);
 
-    swin->image = XCreateImage(
+    swin->gcImage = XCreateImage(
         swin->display, visual, depth, ZPixmap, 0, NULL,
         swin->width, swin->height,
         32, 0
     );
-    SWIN_ASSERT(swin->image && "Failed to create XImage");
+    SWIN_ASSERT(swin->gcImage && "Failed to create XImage");
 
-    size_t byteSize = swin->image->bytes_per_line * swin->image->height;
-    swin->image->data = (char*)SWIN_MALLOC(byteSize);
-    SWIN_ASSERT(swin->image->data && "Failed to allocate XImage data");
-    memset(swin->image->data, 0, byteSize);
+    size_t byteSize = swin->gcImage->bytes_per_line * swin->gcImage->height;
+    swin->gcImage->data = (char*)SWIN_MALLOC(byteSize);
+    SWIN_ASSERT(swin->gcImage->data && "Failed to allocate XImage data");
+    memset(swin->gcImage->data, 0, byteSize);
 }
 
-char swinX11ConvertKey(KeySym key) {
+u8 swinX11ConvertKey(KeySym key) {
     switch (key) {
     case XK_Escape: return Swin_Esc;
     case XK_Control_L: return Swin_CtrlLeft;
@@ -73,22 +79,24 @@ char swinX11ConvertKey(KeySym key) {
     case XK_Up: return Swin_ArrowUp;
     case XK_Down: return Swin_ArrowDown;
 
+    case XK_space: return Swin_Space;
+
     default: break;
     }
 
     if (key >= XK_0 && key <= XK_9) return (char)key;
     if (key >= XK_a && key <= XK_z) return (char)key;
-    if (key >= XK_A && key <= XK_Z) return (char)(key + ('a' - 'A'));
+    if (key >= XK_A && key <= XK_Z) return (char)(key + ('a' - 'A')); // TODO: NOT WORKING
 
     return 0;
 }
 
 void swinX11SetMouseButton(Swin swin, u32 btn, bool value) {
-    // TODO: other buttons
-    if (btn == Button1 || btn == Button2 || btn == Button3) {
-        u8 swinBtn = btn - 1;
-        swin->input.mouse[swinBtn] = value;
-    }
+    if (btn == Button1) swin->input.mouse[SwinMouseButton_Left] = value;
+    else if (btn == Button2) swin->input.mouse[SwinMouseButton_Middle] = value;
+    else if (btn == Button3) swin->input.mouse[SwinMouseButton_Right] = value;
+    else if (btn == Button4) swin->input.mouse[SwinMouseButton_Side1] = value;
+    else if (btn == Button5) swin->input.mouse[SwinMouseButton_Side2] = value;
 }
 
 void swinX11Resize(Swin swin, u32 width, u32 height) {
@@ -97,7 +105,26 @@ void swinX11Resize(Swin swin, u32 width, u32 height) {
     swin->width = width;
     swin->height = height;
     swin->resized = true;
-    swinX11InitImage(swin);
+
+    if (swin->gc) swinX11InitImage(swin);
+}
+
+void swinInitXInput2(Swin swin) {
+    i32 event, error, major = 2, minor = 0;
+
+    SWIN_ASSERT(XQueryExtension(swin->display, "XInputExtension",
+        &swin->xiOpcode, &event, &error) && "XInput extension not available");
+    SWIN_ASSERT(XIQueryVersion(swin->display, &major, &minor) == Success && "XInput2 not available");
+
+    u8 mask[XIMaskLen(XI_RawMotion)] = {};
+    XISetMask(mask, XI_RawMotion);
+
+    XIEventMask evmask = {};
+    evmask.deviceid = XIAllMasterDevices;
+    evmask.mask_len = sizeof(mask);
+    evmask.mask = mask;
+
+    XISelectEvents(swin->display, DefaultRootWindow(swin->display), &evmask, 1);
 }
 
 // --------------------------------------- :Init ---------------------------------------
@@ -107,6 +134,8 @@ Swin swinInit(SwinInitInfo info) {
     Swin swin = (Swin)SWIN_MALLOC(sizeof(struct Swin_t));
     memset(swin, 0, sizeof(struct Swin_t));
 
+    if (info.width == 0) info.width = 400;
+    if (info.height == 0) info.height = 300;
     swin->width = info.width;
     swin->height = info.height;
 
@@ -131,10 +160,6 @@ Swin swinInit(SwinInitInfo info) {
     if (!info.title) info.title = "swin";
     XStoreName(swin->display, swin->window, info.title);
 
-    swin->gc = XCreateGC(swin->display, swin->window, 0,NULL);
-    SWIN_ASSERT(swin->gc && "Failed to create X11 GC");
-    swinX11InitImage(swin);
-
     XSelectInput(swin->display, swin->window,
         ExposureMask |
         KeyPressMask |
@@ -147,16 +172,19 @@ Swin swinInit(SwinInitInfo info) {
     XMapWindow(swin->display, swin->window);
     XFlush(swin->display);
 
+    swinInitXInput2(swin);
+
     swinSetWindowFlags(swin, info.windowFlags);
+    swinSetMouseFlags(swin, info.mouseFlags);
 
     return swin;
 }
 
 bool swinPoll(Swin swin) {
     // Update time
-    struct timespec time;
-    clock_gettime(CLOCK_MONOTONIC, &time);
-    f64 currentTime = (f64)time.tv_sec + (f64)time.tv_nsec / 1000000000.0;
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    f64 currentTime = (f64)ts.tv_sec + (f64)ts.tv_nsec / 1000000000.0;
     swin->deltaTime = (f32)(currentTime - swin->timeCurrent);
     swin->totalTime = (f32)(currentTime - swin->timeStart);
     swin->timeCurrent = currentTime;
@@ -166,6 +194,9 @@ bool swinPoll(Swin swin) {
     swin->input.mouseDeltaY = 0;
     swin->input.scrollDelta = 0;
 
+    // Set prev input
+    memcpy(&swin->prevInput, &swin->input, sizeof(SwinInput));
+
     while (XPending(swin->display)) {
         XEvent event;
         XNextEvent(swin->display, &event);
@@ -174,11 +205,11 @@ bool swinPoll(Swin swin) {
             swinX11Resize(swin, event.xconfigure.width, event.xconfigure.height);
         }
         else if (event.type == KeyPress) {
-            char key = swinX11ConvertKey(XLookupKeysym(&event.xkey, 0));
+            u8 key = swinX11ConvertKey(XLookupKeysym(&event.xkey, 0));
             if (key) swin->input.keys[key] = true;
         }
         else if (event.type == KeyRelease) {
-            char key = swinX11ConvertKey(XLookupKeysym(&event.xkey, 0));
+            u8 key = swinX11ConvertKey(XLookupKeysym(&event.xkey, 0));
             if (key) swin->input.keys[key] = false;
         }
         else if (event.type == ButtonPress) {
@@ -188,16 +219,32 @@ bool swinPoll(Swin swin) {
             swinX11SetMouseButton(swin, event.xbutton.button, false);
         }
         else if (event.type == MotionNotify) {
-            swin->input.mouseDeltaX = event.xmotion.x - swin->input.mouseX;
-            swin->input.mouseDeltaY = event.xmotion.y - swin->input.mouseY;
             swin->input.mouseX = event.xmotion.x;
             swin->input.mouseY = event.xmotion.y;
 
             // Only update cursor lock when mouse moved to avoid infinite move events
             if (swin->mouseFlags & SwinMouse_Locked &&
-                (swin->input.mouseDeltaX > 0 || swin->input.mouseDeltaY > 0)) {
+                (swin->input.mouseDeltaX != 0 || swin->input.mouseDeltaY != 0)) {
                 swinSetMousePosition(swin, swin->lockedCursorPosition);
             }
+        }
+        // Raw input
+        else if (event.xcookie.extension == swin->xiOpcode) {
+            if (!XGetEventData(swin->display, &event.xcookie)) continue;
+
+            XIRawEvent* data = (XIRawEvent*)event.xcookie.data;
+            i32 value_index = 0;
+
+            for (u32 i = 0; i < data->valuators.mask_len * 8; i++) {
+                if (!XIMaskIsSet(data->valuators.mask, i)) continue;
+
+                // Mouse delta
+                f64 value = data->raw_values[value_index++];
+                if (i == 0) swin->input.mouseDeltaX += value;
+                else if (i == 1) swin->input.mouseDeltaY += value;
+            }
+
+            XFreeEventData(swin->display, &event.xcookie);
         }
     }
 
@@ -205,8 +252,15 @@ bool swinPoll(Swin swin) {
 }
 
 void swinDraw(Swin swin, const u32* pixels) {
-    memcpy(swin->image->data, pixels, swin->width * swin->height * sizeof(u32));
-    XPutImage(swin->display, swin->window, swin->gc, swin->image, 0, 0, 0, 0, swin->width, swin->height);
+    // Initialize graphics context on first call
+    if (!swin->gc) {
+        swin->gc = XCreateGC(swin->display, swin->window, 0, NULL);
+        SWIN_ASSERT(swin->gc && "Failed to create X11 graphics context");
+        swinX11InitImage(swin);
+    }
+
+    memcpy(swin->gcImage->data, pixels, swin->width * swin->height * sizeof(u32));
+    XPutImage(swin->display, swin->window, swin->gc, swin->gcImage, 0, 0, 0, 0, swin->width, swin->height);
     XFlush(swin->display);
 }
 
@@ -214,6 +268,10 @@ void swinDraw(Swin swin, const u32* pixels) {
 
 SwinInput swinInput(Swin swin) {
     return swin->input;
+}
+
+SwinInput swinPrevInput(Swin swin) {
+    return swin->prevInput;
 }
 
 void swinSetMouseFlags(Swin swin, SwinMouseFlagBits flags) {
@@ -224,8 +282,8 @@ void swinSetMouseFlags(Swin swin, SwinMouseFlagBits flags) {
         if (flags & SwinMouse_Hidden) {
             Pixmap cursorBitmap = XCreateBitmapFromData(swin->display, swin->window, "\0", 1, 1);
             XColor color = {};
-            Cursor invisibleCursor = XCreatePixmapCursor(swin->display, cursorBitmap, cursorBitmap, &color, &color, 0,
-                0);
+            Cursor invisibleCursor = XCreatePixmapCursor(swin->display,
+                cursorBitmap, cursorBitmap, &color, &color, 0, 0);
             XDefineCursor(swin->display, swin->window, invisibleCursor);
 
             XFreeCursor(swin->display, invisibleCursor);
@@ -249,8 +307,10 @@ void swinSetMouseFlags(Swin swin, SwinMouseFlagBits flags) {
 
     // Locked
     if ((swin->mouseFlags ^ flags) & SwinMouse_Locked) {
-        if (flags & SwinMouse_Locked) swinSetMousePosition(swin, swin->lockedCursorPosition);
-        else swin->lockedCursorPosition = swinGetMousePosition(swin);
+        if (flags & SwinMouse_Locked) {
+            swin->lockedCursorPosition = swinGetMousePosition(swin);
+            swinSetMousePosition(swin, swin->lockedCursorPosition);
+        }
     }
 
     swin->mouseFlags = flags;
@@ -266,7 +326,7 @@ void swinSetMousePosition(Swin swin, SwinPoint position) {
     swin->input.mouseX = position.x;
     swin->input.mouseY = position.y;
     XWarpPointer(swin->display, None, swin->window, 0, 0, 0, 0, position.x, position.y);
-    XFlush(swin->display);
+    // XFlush(swin->display);
 }
 
 // --------------------------------------- :Time ---------------------------------------
@@ -283,7 +343,7 @@ f32 swinDeltaTime(Swin swin) {
 
 void swinSetWindowTitle(Swin swin, const char* title) {
     XStoreName(swin->display, swin->window, title);
-    XFlush(swin->display);
+    // XFlush(swin->display);
 }
 
 bool swinIsWindowResized(Swin swin) {
@@ -367,6 +427,7 @@ void swinSetWindowSize(Swin swin, SwinSize size) {
 
 void swinSetWindowPosition(Swin swin, SwinPoint position) {
     XMoveWindow(swin->display, swin->window, position.x, position.y);
+    XFlush(swin->display);
 }
 
 #endif

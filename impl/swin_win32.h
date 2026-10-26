@@ -1,12 +1,5 @@
 #pragma once
 
-typedef struct {
-    void* instance; // HINSTANCE
-    void* hwd; // HWND
-} SwinWin32State;
-
-SWIN_FN SwinWin32State SwinGetWin32State(Swin swin);
-
 // TODO: allow override winproc
 // swinSetWin32Proc(Swin swin, SwinWin32Proc proc);
 
@@ -102,11 +95,11 @@ LRESULT CALLBACK swinWin32Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 }
 
 Swin swinInit(SwinInitInfo info) {
-    Swin swin = (Swin)malloc(sizeof(struct Swin_t));
-    SWIN_ASSERT(swin);
+    Swin swin = (Swin)SWIN_MALLOC(sizeof(struct Swin_t));
     memset(swin, 0, sizeof(struct Swin_t));
 
-    SWIN_ASSERT(info.width > 0 && info.height > 0 && "Must provide info.width and info.height");
+    if (info.width == 0) info.width = 400;
+    if (info.height == 0) info.height = 300;
     swin->width = info.width;
     swin->height = info.height;
 
@@ -139,10 +132,6 @@ Swin swinInit(SwinInitInfo info) {
     };
     RegisterRawInputDevices(&rid, 1, sizeof(rid));
 
-    // Set default flags
-    swinSetWindowFlags(swin, info.windowFlags);
-    swinSetMouseFlags(swin, info.mouseFlags);
-
     // Launch window
     ShowWindow(swin->wnd, SW_SHOW);
     swin->initialized = true;
@@ -150,6 +139,10 @@ Swin swinInit(SwinInitInfo info) {
     // Time
     QueryPerformanceFrequency(&swin->timeFrequency);
     QueryPerformanceCounter(&swin->timeStart);
+
+    // Set default flags
+    swinSetWindowFlags(swin, info.windowFlags);
+    swinSetMouseFlags(swin, info.mouseFlags);
 
     return swin;
 }
