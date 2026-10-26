@@ -3,4 +3,10 @@
 .vscode/
 .clang-tidy
 
+examples/vulkan/
+
 build/
+*.out
+*.exe
+*.exp
+*.lib

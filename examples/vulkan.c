@@ -1,4 +1,5 @@
-// cc vulkan.c -lvulkan -lX11 -lXi
+// Linux: cc vulkan.c -lvulkan -lX11 -lXi
+// Windows: clang vulkan.c -lvulkan-1 -luser32 -lgdi32
 
 #define SWIN_IMPL
 #include "../swin.h"
@@ -12,7 +13,7 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #define PLATFORM_SURFACE_EXTENSION_NAME VK_KHR_WIN32_SURFACE_EXTENSION_NAME
 #endif
-// TODO: macos
+// NOTE: Vulkan headers might not be in include path on Windows and macOS
 #include <vulkan/vulkan.h>
 #define VK_CHECK(x) do { VkResult err = x; if (err) { printf("Vulkan error: %d\n", err); abort(); } } while(0)
 
@@ -194,22 +195,21 @@ void initVulkan() {
 }
 
 void initVulkanSurface(Swin swin) {
-    // TODO
-    // SwinPlatformState platformState = swinGetPlatformState(swin);
-    SwinX11State state = swinGetX11State(swin);
+    SwinPlatformState platformState = swinGetPlatformState(swin);
+
     // Surface
     #ifdef SWIN_PLATFORM_X11
-    VkXlibSurfaceCreateInfoKHR surfaceInfo = {};
-    surfaceInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-    surfaceInfo.dpy = state.display;
-    surfaceInfo.window = state.window;
-    VK_CHECK(vkCreateXlibSurfaceKHR(instance, &surfaceInfo, NULL, &surface));
+    VkXlibSurfaceCreateInfoKHR info = {};
+    info.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+    info.dpy = platformState.x11.display;
+    info.window = platformState.x11.window;
+    VK_CHECK(vkCreateXlibSurfaceKHR(instance, &info, NULL, &surface));
     #elif defined SWIN_PLATFORM_WIN32
-    VkWin32SurfaceCreateInfoKHR surfaceInfo = {};
-    surfaceInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    surfaceInfo.hinstance = state.instance;
-    surfaceInfo.hwnd = state.hwd;
-    VK_CHECK(vkCreateWin32SurfaceKHR(instance, &surfaceInfo, NULL, &surface));
+    VkWin32SurfaceCreateInfoKHR info = {};
+    info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    info.hinstance = platformState.win32.instance;
+    info.hwnd = platformState.win32.wnd;
+    VK_CHECK(vkCreateWin32SurfaceKHR(instance, &info, NULL, &surface));
     #endif
 }
 

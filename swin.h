@@ -45,7 +45,8 @@ typedef double f64;
 #endif
 #endif
 
-// TODO: window size should always be drawable surface excluding topbar?
+// TODO: window size should always be drawable surface excluding topbar
+// TODO: allow disabling swinDraw to avoid linking with gdi32 on win32
 
 typedef struct Swin_t* Swin;
 
@@ -233,7 +234,7 @@ typedef enum {
 
 typedef struct {
     void* instance; // HINSTANCE
-    void* hwd; // HWND
+    void* wnd; // HWND
 } SwinWin32State;
 
 typedef struct {

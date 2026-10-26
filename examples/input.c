@@ -1,4 +1,5 @@
-// cc input.c -lX11 -lXi
+// Linux: cc input.c -lX11 -lXi
+// Windows: clang input.c -luser32 -lgdi32
 
 #define SWIN_IMPL
 #include "../swin.h"

@@ -1,8 +1,5 @@
 #pragma once
-
-
-// *DEPRECATED* Use `swinGetPlatformState()`
-SWIN_FN SwinX11State swinGetX11State(Swin swin);
+#include "swin.h"
 
 #ifdef SWIN_IMPL
 
@@ -38,11 +35,18 @@ struct Swin_t {
     f32 totalTime;
 };
 
-SwinX11State swinGetX11State(Swin swin) {
-    SwinX11State state = {};
-    state.display = swin->display;
-    state.window = swin->window;
+SwinPlatformState swinGetPlatformState(Swin swin) {
+    SwinPlatformState state = {};
+    state.platform = SwinPlatform_X11;
+    state.x11.display = swin->display;
+    state.x11.window = swin->window;
     return state;
+}
+
+// *DEPRECATED*
+SwinX11State swinGetX11State(Swin swin) {
+    SwinPlatformState state = swinGetPlatformState(swin);
+    return state.x11;
 }
 
 void swinX11InitImage(Swin swin) {

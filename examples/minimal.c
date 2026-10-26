@@ -1,4 +1,5 @@
-// cc minimal.c -lX11 -lXi
+// Linux: cc minimal.c -lX11 -lXi
+// Windows: clang minimal.c -luser32 -lgdi32
 
 #define SWIN_IMPL
 #include "../swin.h"

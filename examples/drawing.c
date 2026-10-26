@@ -1,6 +1,9 @@
-// cc drawing.c -lvulkan -lX11 -lXi
+// Linux: cc drawing.c -lX11 -lXi
+// Windows: clang drawing.c -luser32 -lgdi32
 
 #define SWIN_IMPL
+#include <stdio.h>
+
 #include "../swin.h"
 
 #include <stdlib.h>
@@ -31,8 +34,10 @@ int main() {
         // Draw to pixels array
         for (u32 y = 0; y < height; y++) {
             for (u32 x = 0; x < width; x++) {
-                u8 r = (u8)(x * 255 / width);
-                u8 g = (u8)(y * 255 / height);
+                f32 u = (f32)x / (f32)width;
+                f32 v = (f32)y / (f32)height;
+                u8 r = (u8)(u * 255.0f);
+                u8 g = (u8)(v * 255.0f);
                 u8 b = 128;
                 u8 a = 255;
                 pixels[y * width + x] = (a << 24) | (b << 16) | (g << 8) | r;
