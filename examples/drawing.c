@@ -1,3 +1,5 @@
+// cc drawing.c -lvulkan -lX11 -lXi
+
 #define SWIN_IMPL
 #include "../swin.h"
 
