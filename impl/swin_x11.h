@@ -1,7 +1,4 @@
 #pragma once
-#include "swin.h"
-
-#ifdef SWIN_IMPL
 
 #include <time.h>
 #include <X11/Xlib.h>
@@ -433,5 +430,3 @@ void swinSetWindowPosition(Swin swin, SwinPoint position) {
     XMoveWindow(swin->display, swin->window, position.x, position.y);
     XFlush(swin->display);
 }
-
-#endif

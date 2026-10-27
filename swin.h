@@ -64,6 +64,8 @@ typedef struct {
     SwinWindowFlagBits windowFlags;
     // Mouse flags applied at startup
     SwinMouseFlagBits mouseFlags;
+    // TODO: initial window position
+    // SwinPoint position;
 } SwinInitInfo;
 
 SWIN_FN Swin swinInit(SwinInitInfo info);
@@ -189,7 +191,7 @@ SWIN_FN void swinSetWindowFlags(Swin swin, SwinWindowFlagBits flags);
 SWIN_FN SwinWindowFlagBits swinGetWindowFlags(Swin swin);
 SWIN_FN SwinSize swinGetWindowSize(Swin swin);
 SWIN_FN void swinSetWindowSize(Swin swin, SwinSize size);
-// Returns true for the frame that the window was resized.
+// Returns true if the window resized until the next call to `swinIsWindowResized()`.
 SWIN_FN bool swinIsWindowResized(Swin swin);
 SWIN_FN SwinPoint swinGetWindowPosition(Swin swin);
 SWIN_FN void swinSetWindowPosition(Swin swin, SwinPoint position);
@@ -283,6 +285,8 @@ SWIN_FN SwinX11State swinGetX11State(Swin swin);
 
 // --------------------------------------- :Impl ---------------------------------------
 
+#ifdef SWIN_IMPL
+
 #if !defined(SWIN_MALLOC) || !defined(SWIN_FREE)
 #include <stdlib.h>
 #define SWIN_MALLOC malloc
@@ -296,12 +300,16 @@ SWIN_FN SwinX11State swinGetX11State(Swin swin);
 
 #include "impl/swin_common.h"
 
+// Platform specific implementation
 #if defined(SWIN_PLATFORM_WIN32)
 #include "impl/swin_win32.h"
 #elif defined(SWIN_PLATFORM_X11)
 #include "impl/swin_x11.h"
+#elif defined(SWIN_PLATFORM_MACOS)
+#import "impl/swin_macos.m"
 #endif
 
 // TODO: macOS not implemented
 
-#endif
+#endif // SWIN_IMPL
+#endif // SWIN_H

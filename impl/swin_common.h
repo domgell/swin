@@ -1,6 +1,5 @@
 #pragma once
-
-#ifdef SWIN_IMPL
+#include "../swin.h"
 
 // TODO:
 // union SwinPlatformState { SwinPlatformType type; ... }
@@ -69,4 +68,7 @@ SwinPoint swinGetMouseDelta(Swin swin) {
     return delta;
 }
 
-#endif
+// SwinKeyCode swinImplNormalizeKeyCode(SwinKeyCode key) {
+//     if (key >= 'A' && key <= 'Z') key += ('a' - 'A');
+//     return key;
+// }

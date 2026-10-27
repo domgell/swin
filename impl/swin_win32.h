@@ -3,8 +3,6 @@
 // TODO: allow override winproc
 // swinSetWin32Proc(Swin swin, SwinWin32Proc proc);
 
-#ifdef SWIN_IMPL
-
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
@@ -431,5 +429,3 @@ f32 swinTime(Swin swin) {
 f32 swinDeltaTime(Swin swin) {
     return swin->deltaTime;
 }
-
-#endif
