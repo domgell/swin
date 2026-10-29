@@ -1,9 +1,8 @@
 // Linux: cc drawing.c -lX11 -lXi
 // Windows: clang drawing.c -luser32 -lgdi32
+// MacOS: TODO
 
 #define SWIN_IMPL
-#include <stdio.h>
-
 #include "../swin.h"
 
 #include <stdlib.h>

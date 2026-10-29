@@ -16,6 +16,7 @@ struct Swin_t {
     u32 height;
     bool resized;
     bool initialized;
+    bool quit;
     SwinWindowFlagBits windowFlags;
     // Input
     SwinInput input;
@@ -170,6 +171,14 @@ Swin swinInit(SwinInitInfo info) {
 }
 
 bool swinPoll(Swin swin) {
+    if (swin->quit) {
+        if (swin->dc) ReleaseDC(swin->wnd, swin->dc);
+        DestroyWindow(swin->wnd);
+        SWIN_FREE(swin);
+
+        return false;
+    }
+
     // Update time
     LARGE_INTEGER timeCurrent;
     QueryPerformanceCounter(&timeCurrent);
@@ -229,10 +238,7 @@ void swinDraw(Swin swin, const u32* pixels) {
 
 void swinQuit(Swin swin) {
     if (!swin) return;
-
-    if (swin->dc) ReleaseDC(swin->wnd, swin->dc);
-    DestroyWindow(swin->wnd);
-    SWIN_FREE(swin);
+    swin->quit = true;
 }
 
 /* ---------------------------- :Impl.Win32.Input --------------------------- */
@@ -289,7 +295,8 @@ void swinSetMousePosition(Swin swin, SwinPoint position) {
 /* --------------------------- :Impl.Win32.Window --------------------------- */
 
 SwinSize swinGetWindowSize(Swin swin) {
-    return (SwinSize){
+    return (SwinSize)
+    {
         swin->width, swin->height
     };
 }
@@ -323,7 +330,8 @@ void swinSetWindowTitle(Swin swin, const char* title) {
 SwinPoint swinWindowToScreen(Swin swin, SwinPoint point) {
     POINT p = {point.x, point.y};
     ClientToScreen(swin->wnd, &p);
-    return (SwinPoint){
+    return (SwinPoint)
+    {
         p.x, p.y
     };
 }
@@ -331,7 +339,8 @@ SwinPoint swinWindowToScreen(Swin swin, SwinPoint point) {
 SwinPoint swinScreenToWindow(Swin swin, SwinPoint point) {
     POINT p = {point.x, point.y};
     ScreenToClient(swin->wnd, &p);
-    return (SwinPoint){
+    return (SwinPoint)
+    {
         p.x, p.y
     };
 }
@@ -339,7 +348,8 @@ SwinPoint swinScreenToWindow(Swin swin, SwinPoint point) {
 SwinPoint swinGetWindowPosition(Swin swin) {
     RECT rect;
     GetWindowRect(swin->wnd, &rect);
-    return (SwinPoint){
+    return (SwinPoint)
+    {
         rect.left, rect.top
     };
 }

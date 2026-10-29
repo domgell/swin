@@ -69,6 +69,8 @@ typedef struct {
 } SwinInitInfo;
 
 SWIN_FN Swin swinInit(SwinInitInfo info);
+// Send window quit event.
+// Window and resources are destroyed on next call to `swinPoll()` and it returns false.
 SWIN_FN void swinQuit(Swin swin);
 
 // Update window and input events. Should be called once per frame.
@@ -185,8 +187,6 @@ typedef enum {
     // SwinWindow_Transparent = 1 << 6
 } SwinWindowFlag;
 
-typedef u32 SwinWindowFlagBits;
-
 SWIN_FN void swinSetWindowFlags(Swin swin, SwinWindowFlagBits flags);
 SWIN_FN SwinWindowFlagBits swinGetWindowFlags(Swin swin);
 SWIN_FN SwinSize swinGetWindowSize(Swin swin);
@@ -258,7 +258,7 @@ typedef struct {
     };
 } SwinPlatformState;
 
-SwinPlatformState swinGetPlatformState(Swin swin);
+SWIN_FN SwinPlatformState swinGetPlatformState(Swin swin);
 
 // ------------------------------------ :Deprecated ------------------------------------
 

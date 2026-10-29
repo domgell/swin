@@ -1,5 +1,6 @@
 // Linux: cc vulkan.c -lvulkan -lX11 -lXi
 // Windows: clang vulkan.c -lvulkan-1 -luser32 -lgdi32
+// MacOS: TODO
 
 #define SWIN_IMPL
 #include "../swin.h"

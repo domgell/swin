@@ -1,7 +1,6 @@
 // Linux: cc minimal.c -lX11 -lXi
 // Windows: clang minimal.c -luser32 -lgdi32
-// MacOS: cc minimal.c -lm -framework Foundation -framework AppKit -framework CoreVideo
-// MacOS: cc minimal.c
+// MacOS: TODO
 
 #define SWIN_IMPL
 #include "../swin.h"

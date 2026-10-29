@@ -17,6 +17,7 @@ struct Swin_t {
     u32 width;
     u32 height;
     bool resized;
+    bool quit;
     SwinWindowFlagBits windowFlags;
     // XInput2
     i32 xiOpcode;
@@ -181,7 +182,22 @@ Swin swinInit(SwinInitInfo info) {
     return swin;
 }
 
+void swinQuit(Swin swin) {
+    if (!swin) return;
+    swin->quit = true;
+}
+
 bool swinPoll(Swin swin) {
+    if (swin->quit) {
+        if (swin->gcImage) XDestroyImage(swin->gcImage);
+        if (swin->gc) XFreeGC(swin->display, swin->gc);
+        if (swin->window) XDestroyWindow(swin->display, swin->window);
+        if (swin->display) XCloseDisplay(swin->display);
+        SWIN_FREE(swin);
+
+        return false;
+    }
+
     // Update time
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
