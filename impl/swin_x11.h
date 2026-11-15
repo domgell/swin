@@ -278,7 +278,7 @@ void swinDraw(Swin swin, const u32* pixels) {
 
     memcpy(swin->gcImage->data, pixels, swin->width * swin->height * sizeof(u32));
     XPutImage(swin->display, swin->window, swin->gc, swin->gcImage, 0, 0, 0, 0, swin->width, swin->height);
-    XFlush(swin->display);
+    // XFlush(swin->display);
 }
 
 // -------------------------------------- :Input ---------------------------------------

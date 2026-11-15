@@ -1,18 +1,6 @@
 #ifndef SWIN_H
 #define SWIN_H
 
-#ifndef SWIN_NO_TYPEDEF
-#include <stdbool.h>
-#include <stdint.h>
-typedef uint64_t u64;
-typedef uint32_t u32;
-typedef uint8_t u8;
-typedef int64_t i64;
-typedef int32_t i32;
-typedef float f32;
-typedef double f64;
-#endif
-
 // Infer platform used for windowing
 // Possible values:
 // SWIN_PLATFORM_WIN32, SWIN_PLATFORM_MACOS, SWIN_PLATFORM_X11
@@ -26,6 +14,24 @@ typedef double f64;
 #else
 #error "Cannot infer platform. Define SWIN_NO_PLATFORM_INFER to set platform manually."
 #endif
+#endif
+
+#ifdef SWIN_PLATFORM_X11
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#endif
+#endif
+
+#ifndef SWIN_NO_TYPEDEF
+#include <stdbool.h>
+#include <stdint.h>
+typedef uint64_t u64;
+typedef uint32_t u32;
+typedef uint8_t u8;
+typedef int64_t i64;
+typedef int32_t i32;
+typedef float f32;
+typedef double f64;
 #endif
 
 // All public functions are prefixed with SWIN_FN

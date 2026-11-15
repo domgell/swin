@@ -3,6 +3,7 @@
 .vscode/
 .clang-tidy
 
+# Vulkan includes
 examples/vulkan/
 
 build/
@@ -10,3 +11,5 @@ build/
 *.exe
 *.exp
 *.lib
+*.so
+*.dll
