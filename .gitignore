@@ -6,6 +6,9 @@
 # Vulkan includes
 examples/vulkan/
 
+# Work in progress
+impl/swin_macos.*
+
 build/
 *.out
 *.exe

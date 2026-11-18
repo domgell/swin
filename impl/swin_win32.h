@@ -285,7 +285,7 @@ void swinSetMouseFlags(Swin swin, SwinMouseFlagBits flags) {
     swin->mouseFlags = flags;
 }
 
-// TODO: not sync with input.mouseX, input.mouseY?
+// TODO: sometimes not synced with input.mouseX, input.mouseY
 void swinSetMousePosition(Swin swin, SwinPoint position) {
     POINT p = {position.x, position.y};
     ClientToScreen(swin->wnd, &p);

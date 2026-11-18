@@ -14,8 +14,10 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #define PLATFORM_SURFACE_EXTENSION_NAME VK_KHR_WIN32_SURFACE_EXTENSION_NAME
 #endif
+
 // NOTE: Vulkan headers might not be in include path on Windows and macOS
 #include <vulkan/vulkan.h>
+
 #define VK_CHECK(x) do { VkResult err = x; if (err) { printf("Vulkan error: %d\n", err); abort(); } } while(0)
 
 VkInstance instance;
@@ -28,7 +30,7 @@ VkSurfaceKHR surface;
 VkSwapchainKHR swapchain;
 VkImage swapchainImages[16];
 
-void initVulkan();
+void initVulkanDevice();
 void initVulkanSurface(Swin swin);
 void initVulkanSwapchain(Swin swin);
 VkResult acquireVulkanSwapchainImage(u32* outSwapchainImageIndex);
@@ -40,7 +42,7 @@ int main() {
     Swin swin = swinInit(init);
     swinSetWindowFlags(swin, SwinWindow_Resizable);
 
-    initVulkan();
+    initVulkanDevice();
     initVulkanSurface(swin);
     initVulkanSwapchain(swin);
 
@@ -116,7 +118,7 @@ int main() {
     }
 }
 
-void initVulkan() {
+void initVulkanDevice() {
     // Instance
     VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -182,12 +184,12 @@ void initVulkan() {
     VkCommandPool commandPool;
     VK_CHECK(vkCreateCommandPool(device, &commandPoolInfo, NULL, &commandPool));
     // Command buffer
-    VkCommandBufferAllocateInfo commandBufferInfo = {};
-    commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    commandBufferInfo.commandPool = commandPool;
-    commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    commandBufferInfo.commandBufferCount = 1;
-    VK_CHECK(vkAllocateCommandBuffers(device, &commandBufferInfo, &commandBuffer));
+    VkCommandBufferAllocateInfo cmdInfo = {};
+    cmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmdInfo.commandPool = commandPool;
+    cmdInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmdInfo.commandBufferCount = 1;
+    VK_CHECK(vkAllocateCommandBuffers(device, &cmdInfo, &commandBuffer));
 
     // Fence
     VkFenceCreateInfo fenceInfo = {};

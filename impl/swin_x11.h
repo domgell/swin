@@ -41,12 +41,6 @@ SwinPlatformState swinGetPlatformState(Swin swin) {
     return state;
 }
 
-// *DEPRECATED*
-SwinX11State swinGetX11State(Swin swin) {
-    SwinPlatformState state = swinGetPlatformState(swin);
-    return state.x11;
-}
-
 void swinX11InitImage(Swin swin) {
     if (swin->gcImage)
         XDestroyImage(swin->gcImage);
@@ -88,7 +82,8 @@ u8 swinX11ConvertKey(KeySym key) {
 
     if (key >= XK_0 && key <= XK_9) return (char)key;
     if (key >= XK_a && key <= XK_z) return (char)key;
-    if (key >= XK_A && key <= XK_Z) return (char)(key + ('a' - 'A')); // TODO: NOT WORKING
+    // NOTE: letter keycodes should already have been normalized earlier
+    if (key >= XK_A && key <= XK_Z) return (char)(key + ('a' - 'A'));
 
     return 0;
 }
@@ -146,7 +141,7 @@ Swin swinInit(SwinInitInfo info) {
     SWIN_ASSERT(swin->display && "Failed to open X11 display");
 
     // Window
-    swin->screen = DefaultScreen(swin->display); // TODO: screen
+    swin->screen = DefaultScreen(swin->display);
     swin->window = XCreateSimpleWindow(
         swin->display,
         RootWindow(swin->display, swin->screen),
